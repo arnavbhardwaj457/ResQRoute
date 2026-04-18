@@ -1,0 +1,27 @@
+{
+  "name": "resqroute",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "predev": "kill-port 3000 5000",
+    "dev": "concurrently --kill-others-on-fail \"npm run dev -w apps/web\" \"npm run dev -w apps/api\"",
+    "dev:web": "npm run dev -w apps/web",
+    "dev:api": "npm run dev -w apps/api",
+    "build": "npm run build -w packages/types && npm run build -w apps/api && npm run build -w apps/web",
+    "lint": "npm run lint -w apps/web && npm run lint -w apps/api",
+    "format": "prettier --write .",
+    "typecheck": "npm run typecheck -w packages/types && npm run typecheck -w apps/api && npm run typecheck -w apps/web"
+  },
+  "devDependencies": {
+    "concurrently": "^9.0.1",
+    "eslint": "^8.57.1",
+    "eslint-config-prettier": "^9.1.0",
+    "kill-port": "^2.0.1",
+    "prettier": "^3.3.3",
+    "typescript": "^6.0.0"
+  }
+}

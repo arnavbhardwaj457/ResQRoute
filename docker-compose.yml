@@ -1,0 +1,71 @@
+# ──────────────────────────────────────────────
+# ResQRoute — Docker Compose (Full Stack)
+# ──────────────────────────────────────────────
+# Usage:
+#   docker-compose up -d          → start all services
+#   docker-compose down           → stop all
+#   docker-compose logs -f web    → follow web logs
+# ──────────────────────────────────────────────
+
+version: '3.8'
+
+services:
+  # ── MongoDB ──────────────────────────────────
+  mongo:
+    image: mongo:7
+    container_name: resqroute-mongo
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+    environment:
+      MONGO_INITDB_DATABASE: resqroute
+    networks:
+      - resqroute-net
+
+  # ── API Server ──────────────────────────────
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: api
+    container_name: resqroute-api
+    restart: unless-stopped
+    ports:
+      - "4000:4000"
+    environment:
+      PORT: 4000
+      MONGODB_URI: mongodb://mongo:27017/resqroute
+      CORS_ORIGIN: http://localhost:3000
+      NODE_ENV: production
+    depends_on:
+      - mongo
+    networks:
+      - resqroute-net
+
+  # ── Web Frontend ────────────────────────────
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: web
+    container_name: resqroute-web
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:4000/api
+      NEXT_PUBLIC_SOCKET_URL: http://localhost:4000
+    depends_on:
+      - api
+    networks:
+      - resqroute-net
+
+volumes:
+  mongo-data:
+    driver: local
+
+networks:
+  resqroute-net:
+    driver: bridge
