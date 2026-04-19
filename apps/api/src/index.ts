@@ -1,10 +1,11 @@
 import cors from 'cors';
+import dotenv from 'dotenv';
 import express from 'express';
 import { createServer } from 'node:http';
+import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { Server } from 'socket.io';
 import { z } from 'zod';
-import { env } from './config/env';
-import { connectDb } from './config/db';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler';
 import { apiRateLimiter } from './middleware/rateLimiter';
 import { seedHospitals } from './seed/seedHospitals';
@@ -37,6 +38,25 @@ type EmergencyAlertPayload = {
 const emergencyDecisionSchema = z.object({
   alertId: z.string().min(1),
   decision: z.enum(['accepted', 'rejected']),
+});
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const apiEnvPath = resolve(__dirname, '../.env');
+
+process.env.DOTENV_CONFIG_PATH = apiEnvPath;
+dotenv.config({ path: apiEnvPath });
+
+const mongodbUriForDebug =
+  process.env.NODE_ENV === 'production'
+    ? process.env.MONGODB_URI
+      ? '[set]'
+      : 'undefined'
+    : process.env.MONGODB_URI ?? 'undefined';
+
+logger.info('Loaded MongoDB URI from environment', {
+  envPath: apiEnvPath,
+  mongodbUri: mongodbUriForDebug,
 });
 
 function normalizeDegrees(degrees: number) {
@@ -83,7 +103,13 @@ function getEmergencyAlertAt(nowMs: number): EmergencyAlertPayload {
 }
 
 async function bootstrap() {
-  await connectDb(env.MONGODB_URI);
+  const [{ env }, { connectDb }] = await Promise.all([
+    import('./config/env'),
+    import('./config/db'),
+  ]);
+
+  void env.MONGODB_URI;
+  await connectDb();
   await seedHospitals();
 
   const app = express();
